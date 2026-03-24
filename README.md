@@ -347,3 +347,20 @@ Services monitor:
 
 **Register Page**
 ![Register Page](src/Frontend-Customer/assets/Screenshot137.png)
+
+
+
+
+##  How to Run
+
+### Prerequisites
+- Docker  
+
+---
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Abdellah-saim-mamoune1/MicroServices.git
+cd MicroServices
+docker-compose up -d rabbitmq
+docker-compose up -d --build
