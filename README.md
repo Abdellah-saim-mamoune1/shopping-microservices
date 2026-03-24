@@ -24,13 +24,13 @@
 
 | Service | Port | Database | Purpose |
 |---------|------|----------|---------|
-| **Authentication.API** | 5001-5003 | PostgreSQL | User registration, JWT tokens, login |
-| **Catalog.API** | 5004-5006 | MongoDB | Product management, calls Discount.GRPC |
-| **Basket.API** | 5007-5008 | Redis | Shopping cart, publishes CheckoutEvent |
-| **Discount.API** | 5009 | PostgreSQL | REST API for discounts |
-| **Discount.GRPC** | 5010-5011 | PostgreSQL | gRPC service for fast discount lookups |
-| **Ordering.API** | 5012-5013 | MongoDB | Order management, consumes CheckoutEvent |
-| **User.API** | 5014-5015 | PostgreSQL | User profiles, consumes RegistrationEvent |
+| **Authentication.API** | 5005 | PostgreSQL | User registration, JWT tokens, login |
+| **Catalog.API** | 5000| MongoDB | Product management, calls Discount.GRPC |
+| **Basket.API** | 5001 | Redis | Shopping cart, publishes CheckoutEvent |
+| **Discount.API** | 5002 | PostgreSQL | REST API for discounts |
+| **Discount.GRPC** | None | PostgreSQL | gRPC service for fast discount lookups |
+| **Ordering.API** | 5003 | MongoDB | Order management, consumes CheckoutEvent |
+| **User.API** | 5004 | PostgreSQL | User profiles, consumes RegistrationEvent |
 
 ---
 
