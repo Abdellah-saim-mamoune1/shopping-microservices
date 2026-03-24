@@ -1,10 +1,11 @@
-﻿using Basket.API.Entities;
+﻿using Basket.API.Dtos;
+using Basket.API.Entities;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 
 namespace Basket.API.Repositories
 {
-    public class BasketRepository:IBasketRepository
+    public class BasketRepository : IBasketRepository
     {
         private readonly IDistributedCache _redisCache;
 
@@ -13,26 +14,98 @@ namespace Basket.API.Repositories
             _redisCache = redisCache ?? throw new ArgumentNullException(nameof(redisCache));
         }
 
-        public async Task<ShoppingCart?> GetBasket(string userName)
+        public async Task<Cart?> GetAsync(string UserId)
         {
-            var basket = await _redisCache.GetStringAsync(userName);
+            var basket = await _redisCache.GetStringAsync(UserId);
 
             if (String.IsNullOrEmpty(basket))
                 return null;
 
-            return JsonConvert.DeserializeObject<ShoppingCart>(basket);
+            return JsonConvert.DeserializeObject<Cart>(basket);
         }
 
-        public async Task<ShoppingCart?> UpdateBasket(ShoppingCart basket)
+        public async Task AddItemAsync(CartItem item, string userId)
         {
-            await _redisCache.SetStringAsync(basket.UserName, JsonConvert.SerializeObject(basket));
+            var basketString = await _redisCache.GetStringAsync(userId);
 
-            return await GetBasket(basket.UserName);
+            Cart basket;
+
+            if (string.IsNullOrEmpty(basketString))
+            {
+                basket = new Cart
+                {
+                    UserId = int.Parse(userId),
+                    Items = new List<CartItem>()
+                };
+            }
+            else
+            {
+                basket = JsonConvert.DeserializeObject<Cart>(basketString);
+            }
+
+
+            var Item = basket.Items.FirstOrDefault(i => i.ProductId == item.ProductId);
+            if (Item != null)
+            {
+                Item.Quantity++;
+            }
+
+            else
+                basket.Items.Add(item);
+
+            var updatedBasket = JsonConvert.SerializeObject(basket);
+
+            await _redisCache.SetStringAsync(userId, updatedBasket);
         }
 
-        public async Task DeleteBasket(string userName)
+        public async Task UpdateItemAsync(BasketUpdateDto Item, string UserId)
         {
-            await _redisCache.RemoveAsync(userName);
+            var basketString = await _redisCache.GetStringAsync(UserId);
+
+            if (String.IsNullOrEmpty(basketString))
+                return;
+
+            var basket = JsonConvert.DeserializeObject<Cart>(basketString);
+
+            if (basket == null)
+                return;
+
+            var item = basket.Items.FirstOrDefault(i => i.ProductId == Item.ProductId);
+
+            if (item == null)
+                return;
+
+            item.Quantity = Item.Quantity;
+
+       
+            await _redisCache.SetStringAsync(UserId, JsonConvert.SerializeObject(basket));
+        }
+
+        public async Task DeleteItemAsync(string ItemId, string UserId)
+        {
+            var basketString = await _redisCache.GetStringAsync(UserId);
+
+            if (String.IsNullOrEmpty(basketString))
+                return;
+
+            var basket = JsonConvert.DeserializeObject<Cart>(basketString);
+
+            if (basket == null)
+                return;
+
+            var item = basket.Items.FirstOrDefault(i => i.ProductId == ItemId);
+
+            if (item == null)
+                return;
+
+            basket.Items.Remove(item);
+
+            await _redisCache.SetStringAsync(UserId, JsonConvert.SerializeObject(basket));
+        }
+
+        public async Task DeleteBasketAsync(string userId)
+        {
+            await _redisCache.RemoveAsync(userId);
         }
     }
 }

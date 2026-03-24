@@ -1,25 +1,210 @@
+
+
 services:
-  catalogdb:
-    container_name: catalogdb
-    image: mongo
+
+  discountdb:
+    container_name: discountdb
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: sa1234
+      POSTGRES_DB: DiscountDb
     restart: always
     ports:
-      - "27071:27017"          # host port : container port
-    volumes:
-      - mongo-data:/data/db
+      - "5430:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sa"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
 
-  catalog:
-    container_name: catalog
-    build:
-      context: .
-      dockerfile: Catalog/Dockerfile
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080       # Force HTTP for Swagger
-      - "MongoDbSettings:ConnectionString=mongodb://catalogdb:27017"  # container port
+
+
+  orderdb:
+    container_name: orderdb
+    image:  mongo:7
+    restart: always
     ports:
-      - "8080:8080"          # host port : container port
+      - "27018:27017"
+   
+
+  userdb:
+    container_name: userdb
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: sa1234
+      POSTGRES_DB: UserDb
+    restart: always
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sa"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  authdb:
+    container_name: authdb
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: sa1234
+      POSTGRES_DB: AuthDb
+    restart: always
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sa"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+ 
+  catalogdb:
+    container_name: catalogdb
+    image: mongo:7
+    restart: always
+    ports:
+      - "27017:27017"
+
+  basketdb:
+    container_name: basketdb
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+ 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_ERLANG_COOKIE: 'MYSECRETCOOKIE'
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+
+  # ---------------- APIs ----------------
+  catalog.api:
+    container_name: catalog.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      MongoDbSettings__ConnectionString: mongodb://catalogdb:27017
+      MongoDbSettings__DatabaseName: Products
+      GrpcSettings__DiscountUrl: http://discount.grpc:8080
+
     depends_on:
       - catalogdb
-    volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+
+    ports:
+      - "8000:80"
+
+  basket.api:
+    container_name: basket.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      Redis__ConnectionString: basketdb:6379
+      EventBusSettings__HostAddress: amqp://user:password@rabbitmq:5672
+    depends_on:
+      - basketdb
+      - rabbitmq
+    ports:
+      - "8001:80"
+
+  discount.api:
+    container_name: discount.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=discountdb;Port=5432;Database=DiscountDb;Username=sa;Password=sa1234
+   
+    depends_on:
+      discountdb:
+        condition: service_healthy
+    ports:
+      - "8002:80"
+
+  discount.grpc:
+    container_name: discount.grpc
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=discountdb;Port=5432;Database=DiscountDb;Username=sa;Password=sa1234
+      - EventBusSettings__HostAddress=amqp://user:password@rabbitmq:5672
+    depends_on:
+      discountdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8003:80"
+
+  ordering.api:
+    container_name: ordering.api
+    environment:
+       ASPNETCORE_ENVIRONMENT: Development
+       ASPNETCORE_URLS: http://+:80
+       MongoDb__ConnectionString: mongodb://orderdb:27017
+       MongoDb__Database: Orders
+       EventBusSettings__HostAddress: amqp://user:password@rabbitmq:5672
+
+    depends_on:
+      orderdb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8004:80"
+
+  user.api:
+    container_name: user.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=userdb;Port=5432;Database=UserDb;Username=sa;Password=sa1234
+      - EventBusSettings__HostAddress=amqp://user:password@rabbitmq:5672
+    depends_on:
+      userdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8005:80"
+
+  authentication.api:
+    container_name: authentication.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=authdb;Port=5432;Database=AuthDb;Username=sa;Password=sa1234
+      - EventBusSettings__HostAddress=amqp://user:password@rabbitmq:5672
+    depends_on:
+      authdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8006:80"
+
+
+
+  ocelotapigw:
+     image: ${DOCKER_REGISTRY-}ocelotapigw
+     build:
+       context: .
+       dockerfile: ApiGateways/OcelotApiGw/Dockerfile
+     environment:
+       - ASPNETCORE_ENVIRONMENT=Docker
+       - ASPNETCORE_URLS=http://+:80
+     ports:
+       - "7000:80"

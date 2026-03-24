@@ -1,0 +1,72 @@
+/* App.css */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--light-color);
+}
+
+.app > nav {
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+
+.main-content {
+  flex: 1;
+  padding: 1rem 1rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Full-page content (Auth pages) */
+.main-content > .auth-container {
+  width: calc(100% + 4rem);
+  margin: -2rem -1rem;
+  padding: 4rem 2rem !important;
+  max-width: none;
+  min-height: 100%;
+}
+
+.app > footer {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+/* Container Utility */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.container-full {
+  width: 100%;
+}
+
+/* Page Header */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.875rem;
+  }
+}

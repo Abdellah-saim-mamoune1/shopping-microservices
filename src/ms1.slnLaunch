@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "Services\\Discount\\Discount.GRPC\\Discount.GRPC.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Services\\Catalog\\Catalog.API\\Catalog.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "ApiGateways\\OcelotApiGw\\OcelotApiGw.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

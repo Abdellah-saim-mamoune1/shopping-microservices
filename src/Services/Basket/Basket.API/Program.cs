@@ -1,50 +1,79 @@
-using Basket.API.Repositories;
-using StackExchange.Redis;
+﻿using Basket.API.Repositories;
+using Basket.API.Services;
+using MassTransit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-
-//redis
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+builder.Services.AddStackExchangeRedisCache(options =>
 {
-    var connectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+    options.Configuration = builder.Configuration["Redis:ConnectionString"];
+});
 
-    if (string.IsNullOrEmpty(connectionString))
-        throw new InvalidOperationException("Redis connection string is not configured");
-
-    return ConnectionMultiplexer.Connect(connectionString);
+builder.Services.AddMassTransit(config =>
+{
+    config.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(builder.Configuration["EventBusSettings:HostAddress"]);
+    });
 });
 
 
-builder.Services.AddScoped<IDatabase>(sp =>
-{
-    var multiplexer = sp.GetRequiredService<IConnectionMultiplexer>();
-    return multiplexer.GetDatabase();
-});
 
+
+
+//Services
+builder.Services.AddScoped<IBasketService, BasketService>();
+
+//Repository
 builder.Services.AddScoped<IBasketRepository, BasketRepository>();
+
+
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["AppSettings:Issuer"],
+            ValidAudience = builder.Configuration["AppSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!)),
+
+        };
+
+
+
+    });
+
+
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
+app.UseMiddleware<UnifiedResponseMiddleware>();
+// ❗If running in Docker HTTP-only
+// app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

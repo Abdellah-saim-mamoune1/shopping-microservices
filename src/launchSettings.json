@@ -4,7 +4,12 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "catalog": "StartDebugging"
+        "catalog": "StartDebugging",
+        "catalog.api": "StartDebugging",
+        "discount.grpc": "StartDebugging",
+        "ordering.api": "StartDebugging",
+        "basket.api": "StartDebugging",
+        "authentication.api": "StartDebugging"
       }
     }
   }
