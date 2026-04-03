@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Distributed microservices architecture** built for an e-commerce platform with multiple independent services communicating via REST, gRPC, and event-driven messaging.
+**Distributed microservices architecture** built for a books e-commerce platform with multiple independent services communicating via REST, gRPC, and event-driven messaging.
 
 **Key Features:**
 - Multi-service deployment with independent databases
